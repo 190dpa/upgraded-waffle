@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>DOLLYA STORE - Painel v2</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  /* Reset */
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial; background:linear-gradient(180deg,#0f1724,#111827); color:#e6eef8; min-height:100vh; padding:28px; display:flex; justify-content:center}
+
+  /* Layout */
+  .app{width:980px; max-width:98%; background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.2)); border-radius:14px; padding:20px; box-shadow:0 10px 30px rgba(2,6,23,0.6)}
+  .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+  .title{display:flex;gap:12px;align-items:center}
+  .logo{width:56px;height:56px;border-radius:10px;background:linear-gradient(135deg,#ff8a00,#ffd100);display:flex;align-items:center;justify-content:center;font-weight:800;color:#111}
+  h1{font-size:20px}
+  .tabs{display:flex;gap:8px}
+
+  .tab{padding:8px 14px;border-radius:10px;background:transparent;border:1px solid transparent;cursor:pointer;color:#cbd5e1}
+  .tab.active{background:linear-gradient(90deg,#ffb86b,#ffdc73);color:#111;border-color:rgba(0,0,0,0.15);box-shadow:0 6px 14px rgba(255,200,80,0.08)}
+
+  /* grid */
+  .content{display:flex;gap:20px}
+  .left{flex:1}
+  .right{width:360px}
+
+  /* Stock list */
+  .card{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.2)); border-radius:12px;padding:14px;margin-bottom:12px;display:flex;gap:14px;align-items:center}
+  .thumb{width:56px;height:56px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;background:linear-gradient(135deg,#0ea5a4,#9333ea)}
+  .meta{flex:1}
+  .meta h3{font-size:16px;color:#fff;margin-bottom:6px}
+  .meta small{color:#cbd5e1;opacity:0.9}
+  .controls{display:flex;gap:8px;align-items:center}
+  .controls input[type="number"]{width:110px;padding:8px;border-radius:8px;border:none;background:#0b1220;color:#fff;font-weight:700;text-align:center}
+  .controls button{padding:8px 12px;border-radius:8px;border:none;background:#ffb86b;color:#111;font-weight:700;cursor:pointer}
+
+  /* add fruit form */
+  .panel{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.06));padding:14px;border-radius:12px}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+  label{font-size:13px;color:#cbd5e1}
+  input[type="text"], input[type="number"], select{padding:10px;border-radius:8px;border:none;background:#071124;color:#fff}
+  input[type="text"]::placeholder{color:#94a3b8}
+
+  .small{font-size:13px;color:#94a3b8;margin-top:8px}
+
+  /* deliveries */
+  .deliver-list{max-height:420px;overflow:auto;padding-right:6px}
+  .delivery{background:#071A2B;padding:10px;border-radius:10px;margin-bottom:10px}
+  .delivery time{font-size:12px;color:#94a3b8}
+
+  .btn-primary{background:linear-gradient(90deg,#ffb86b,#ffdd73);border:none;padding:10px 14px;border-radius:10px;font-weight:800;color:#111;cursor:pointer}
+  .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 10px;border-radius:8px;color:#cbd5e1;cursor:pointer}
+
+  /* responsive */
+  @media(max-width:920px){
+    .content{flex-direction:column}
+    .right{width:100%}
+  }
+</style>
+<style>
+  /* Estilos para a notificação (toast) */
+  #notification {
+    display: none; /* Escondido por padrão */
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #22c55e; /* Verde para sucesso */
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="title">
+      <div class="logo">DS</div>
+      <div>
+        <h1>DOLLYA STORE • Painel v2</h1>
+        <small style="color:#94a3b8">Gerencie stock, adicione frutas e crie entregas com fotos</small>
+      </div>
+    </div>
+    <div class="tabs">
+      <div class="tab active" data-tab="stock">Stock</div>
+      <div class="tab" data-tab="deliveries">Entregas</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="left">
+
+      <!-- STOCK area -->
+      <div id="tab-stock">
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+          <button id="refresh-stock" class="btn-ghost">Atualizar</button>
+          <div style="flex:1"></div>
+          <button id="open-add" class="btn-ghost">+ Nova Fruta</button>
+        </div>
+
+        <div id="stock-list"></div>
+
+        <!-- add fruit panel (hidden by default) -->
+        <div id="add-fruit-panel" class="panel" style="display:none;margin-top:10px">
+          <div class="field">
+            <label>Nome (ex: STRAWBERRY)</label>
+            <input id="new-name" type="text" placeholder="Nome da fruta">
+          </div>
+          <div class="field">
+            <label>Emoji (ex: 🍓)</label>
+            <input id="new-emoji" type="text" placeholder="Emoji">
+          </div>
+          <div class="field">
+            <label>Preço (R$)</label>
+            <input id="new-price" type="number" step="0.01" placeholder="0.50">
+          </div>
+          <div class="field">
+            <label>Estoque inicial</label>
+            <input id="new-qty" type="number" placeholder="100">
+          </div>
+          <div style="display:flex;gap:8px">
+            <button id="btn-add-fruit" class="btn-primary">Adicionar Fruta</button>
+            <button id="btn-cancel-add" class="btn-ghost">Cancelar</button>
+          </div>
+          <div class="small">A fruta será salva em <code>stock.json</code> e aparecerá no painel.</div>
+        </div>
+      </div>
+
+      <!-- DELIVERIES area -->
+      <div id="tab-deliveries" style="display:none">
+        <div class="panel" style="margin-bottom:12px">
+          <div class="field">
+            <label>Destinatário (ID ou @menção)</label>
+            <input id="delivery-mention" type="text" placeholder="@User ou 123456789">
+          </div>
+          <div class="field">
+            <label>Produto</label>
+            <select id="delivery-item"></select>
+          </div>
+          <div class="field">
+            <label>Quantidade</label>
+            <input id="delivery-qty" type="number" value="1" min="1">
+          </div>
+          <div class="field">
+            <label>Nota (opcional)</label>
+            <input id="delivery-note" type="text" placeholder="Observações">
+          </div>
+          <div class="field">
+            <label>Foto da Entrega (opcional)</label>
+            <input id="delivery-photo" type="file" accept="image/*">
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="btn-create-delivery" class="btn-primary">Gerar Entrega</button>
+            <button id="btn-clear-delivery" class="btn-ghost">Limpar</button>
+          </div>
+        </div>
+
+        <h3 style="margin-bottom:8px">Histórico de Entregas</h3>
+        <div id="deliveries-list" class="deliver-list"></div>
+      </div>
+
+    </div>
+
+    <div class="right">
+      <div class="panel">
+        <h3 style="margin-bottom:10px">Preview do Embed principal</h3>
+        <div id="embed-preview" style="background:#071428;border-radius:8px;padding:12px;color:#cfe9ff"></div>
+        <button id="btn-push-main" class="btn-primary" style="width:100%; margin-top:10px;">Enviar/Atualizar Embed</button>
+        <div class="small" style="margin-top:8px">Cria uma nova mensagem de estoque ou atualiza uma existente se o ID da mensagem estiver configurado.</div>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <div class="panel">
+        <h3 style="margin-bottom:10px">Configurações</h3>
+        <div class="field">
+          <label>ID do Canal de Estoque (principal)</label>
+          <input id="config-stock-channel-id" type="text" placeholder="Cole o ID do canal de estoque">
+        </div>
+        <div class="field">
+          <label>ID do Canal de Entregas</label>
+          <input id="config-delivery-channel-id" type="text" placeholder="Cole o ID do canal de entregas">
+        </div>
+        <div class="field">
+          <label>ID da Mensagem de Estoque (para edição)</label>
+          <input id="config-main-message-id" type="text" placeholder="Opcional: cole o ID da mensagem a ser editada">
+        </div>
+        <div class="field">
+          <label>ID do Cargo de Cliente (para menção)</label>
+          <input id="config-client-role-id" type="text" placeholder="Opcional: cole o ID do cargo a ser mencionado">
+        </div>
+        <div class="field">
+          <label>ID do Servidor (Guild ID)</label>
+          <input id="config-guild-id" type="text" placeholder="Opcional: cole o ID do seu servidor">
+        </div>
+        <button id="btn-save-config" class="btn-primary" style="width:100%; margin-top:8px">Salvar Configurações</button>
+        <div id="config-external-note" class="small" style="display:none; margin-top:8px; text-align:center; color: #ffb86b;">As configurações são gerenciadas externamente (ex: Render).</div>
+      </div>
+
+      <div class="panel">
+        <h3 style="margin-bottom:10px">Ações Rápidas</h3>
+        <button id="btn-export-json" class="btn-ghost" style="width:100%;margin-bottom:8px">Exportar stock JSON</button>
+        <button id="btn-import-json" class="btn-ghost" style="width:100%">Importar stock JSON</button>
+        <div class="small" style="margin-top:8px">Importa/Exporta para backup.</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Elemento para a notificação (toast) -->
+<div id="notification"></div>
+
+<script>
+/* front-end logic */
+const tabs = document.querySelectorAll('.tab');
+const tabStock = document.getElementById('tab-stock');
+const tabDeliveries = document.getElementById('tab-deliveries');
+
+tabs.forEach(t => t.addEventListener('click', () => {
+  tabs.forEach(x => x.classList.remove('active'));
+  t.classList.add('active');
+  const name = t.dataset.tab;
+  if(name === 'stock'){ tabStock.style.display='block'; tabDeliveries.style.display='none'; }
+  else { tabStock.style.display='none'; tabDeliveries.style.display='block'; }
+}));
+
+// elements
+const stockList = document.getElementById('stock-list');
+const refreshBtn = document.getElementById('refresh-stock');
+const openAddBtn = document.getElementById('open-add');
+const addPanel = document.getElementById('add-fruit-panel');
+const btnAddFruit = document.getElementById('btn-add-fruit');
+const btnCancelAdd = document.getElementById('btn-cancel-add');
+const newName = document.getElementById('new-name');
+const newEmoji = document.getElementById('new-emoji');
+const newPrice = document.getElementById('new-price');
+const newQty = document.getElementById('new-qty');
+
+const deliveryItemSelect = document.getElementById('delivery-item');
+const deliveriesList = document.getElementById('deliveries-list');
+const btnCreateDelivery = document.getElementById('btn-create-delivery');
+
+const embedPreview = document.getElementById('embed-preview');
+const btnPushMain = document.getElementById('btn-push-main');
+
+const btnExport = document.getElementById('btn-export-json');
+const btnImport = document.getElementById('btn-import-json');
+
+const mainMessageIdInput = document.getElementById('config-main-message-id');
+const stockChannelIdInput = document.getElementById('config-stock-channel-id');
+const deliveryChannelIdInput = document.getElementById('config-delivery-channel-id');
+const clientRoleIdInput = document.getElementById('config-client-role-id');
+const guildIdInput = document.getElementById('config-guild-id');
+const btnSaveConfig = document.getElementById('btn-save-config');
+
+let STOCK = []; // local cache
+
+// helper: show temporary toast
+function toast(msg) {
+  const el = document.getElementById('notification');
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(()=> el.style.display='none', 3000);
+}
+
+// load stock from server
+async function loadStock(){
+  try {
+    const res = await fetch('/get-stock');
+    const data = await res.json();
+    STOCK = data;
+    renderStockList();
+    renderDeliveryOptions();
+    renderEmbedPreview();
+    loadConfig(); // Carrega as configurações também
+  } catch (err) {
+    console.error('Erro loadStock', err);
+    toast('Erro ao carregar stock');
+  }
+}
+
+function renderStockList(){
+  stockList.innerHTML = '';
+  STOCK.forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'card';
+    const pct = Math.round((item.quantity / (item.max||item.quantity||100)) * 100);
+    el.innerHTML = `
+      <div class="thumb">${item.emoji||'🍉'}</div>
+      <div class="meta">
+        <h3>${item.name}</h3>
+        <small>Preço: R$${Number(item.price).toFixed(2)} • Estoque: ${item.quantity>0?item.quantity:'ESGOTADO'}</small>
+      </div>
+      <div class="controls">
+        <input type="number" id="${item.id}_price_in" value="${Number(item.price).toFixed(2)}" step="0.01">
+        <input type="number" id="${item.id}_qty_in" value="${item.quantity}" min="0">
+        <button class="btn-ghost" data-id="${item.id}" onclick="quickSave('${item.id}')">Salvar</button>
+      </div>
+    `;
+    stockList.appendChild(el);
+  });
+}
+
+// quick save single item
+async function quickSave(id){
+  const priceEl = document.getElementById(`${id}_price_in`);
+  const qtyEl = document.getElementById(`${id}_qty_in`);
+  const payload = {};
+  payload[`${id}_price`] = parseFloat(priceEl.value);
+  payload[`${id}_quantity`] = parseInt(qtyEl.value);
+  try {
+    const res = await fetch('/update-stock', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    await loadStock();
+    toast('Item atualizado');
+  } catch (e) { console.error(e); toast('Erro ao salvar'); }
+}
+
+// render delivery select
+function renderDeliveryOptions(){
+  deliveryItemSelect.innerHTML = '';
+  STOCK.forEach(it => {
+    const o = document.createElement('option');
+    o.value = it.id;
+    o.textContent = `${it.emoji} ${it.name} — R$${Number(it.price).toFixed(2)} • ${it.quantity>0?it.quantity:'ESGOTADO'}`;
+    deliveryItemSelect.appendChild(o);
+  });
+}
+
+// ADD fruit UI
+openAddBtn.addEventListener('click', ()=> addPanel.style.display='block');
+btnCancelAdd.addEventListener('click', ()=> addPanel.style.display='none');
+
+btnAddFruit.addEventListener('click', async ()=>{
+  const name = newName.value.trim();
+  if(!name) return toast('Nome obrigatório');
+  const payload = {
+    id: name.toUpperCase().replace(/\s+/g,'_'),
+    name: name,
+    emoji: newEmoji.value.trim() || '',
+    price: Number(newPrice.value) || 0,
+    quantity: Number(newQty.value) || 0,
+    max: Number(newQty.value) || 100
+  };
+  try {
+    const res = await fetch('/add-fruit', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if(data.status === 'success') {
+      addPanel.style.display='none';
+      newName.value = newEmoji.value = newPrice.value = newQty.value = '';
+      await loadStock();
+      toast('Fruta adicionada');
+    } else {
+      toast(data.message || 'Erro ao adicionar');
+    }
+  } catch (e) {
+    console.error(e);
+    toast('Erro ao adicionar fruta');
+  }
+});
+
+// create delivery
+btnCreateDelivery.addEventListener('click', async () => {
+  const mention = document.getElementById('delivery-mention').value.trim();
+  const itemId = document.getElementById('delivery-item').value;
+  const qty = Number(document.getElementById('delivery-qty').value) || 1;
+  const note = document.getElementById('delivery-note').value.trim();
+  const photoInput = document.getElementById('delivery-photo');
+
+  if(!itemId) return toast('Escolha um produto');
+
+  const form = new FormData();
+  form.append('mention', mention);
+  form.append('itemId', itemId);
+  form.append('quantity', qty);
+  form.append('note', note);
+
+  if(photoInput.files && photoInput.files[0]) form.append('photo', photoInput.files[0]);
+
+  try {
+    const res = await fetch('/deliver', { method: 'POST', body: form });
+    const data = await res.json();
+    if(data.status === 'success') {
+      toast('Entrega criada e enviada!');
+      await loadStock(); // Atualiza o estoque local após a entrega
+      loadDeliveries();
+    } else {
+      toast('Falha ao enviar entrega');
+    }
+  } catch (e) {
+    console.error('Erro deliver', e);
+    toast('Erro ao criar entrega');
+  }
+});
+
+// load deliveries history
+async function loadDeliveries(){
+  try {
+    const res = await fetch('/get-deliveries');
+    const arr = await res.json();
+    deliveriesList.innerHTML = '';
+    arr.forEach(d => {
+      const el = document.createElement('div');
+      el.className = 'delivery';
+      el.innerHTML = `
+        <div><strong>${d.itemName}</strong> x${d.quantity} — ${d.mention || 'sem destinatário'}</div>
+        ${d.photoUrl ? `<div style="margin-top:8px"><img src="${d.photoUrl}" style="max-width:100%;border-radius:8px"></div>` : ''}
+        <time>${new Date(d.timestamp).toLocaleString()}</time>
+      `;
+      deliveriesList.appendChild(el);
+    });
+  } catch(e) { console.error('loadDeliveries', e); }
+}
+
+// embed preview
+function renderEmbedPreview(){
+  embedPreview.innerHTML = '';
+  const el = document.createElement('div');
+  el.style.padding='12px';
+  el.style.borderRadius='8px';
+  el.style.background='#021122';
+  el.innerHTML = `<strong>RT STORE — TABELA DE PREÇOS</strong><div style="margin-top:8px">${STOCK.map(it=>`<div style="margin-bottom:6px">${it.emoji} <strong>${it.name}</strong> — R$${Number(it.price).toFixed(2)} • ${it.quantity>0?it.quantity:'ESGOTADO'}</div>`).join('')}</div>`;
+  embedPreview.appendChild(el);
+}
+
+// push main embed using main webhook/messageId fields in server config or manual (main webhook is configured server-side)
+btnPushMain.addEventListener('click', async () => {
+  // this endpoint uses server-side configured webhook & messageId (index.js)
+  try {
+    const res = await fetch('/update-stock',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({}) // will just trigger writing current STOCK in server if desired
+    });
+    await res.json();
+    toast('Solicitado update do embed principal (se configurado).');
+  } catch(e) { console.error(e); toast('Erro ao atualizar embed'); }
+});
+
+// export / import
+btnExport.addEventListener('click', () => {
+  const dataStr = JSON.stringify(STOCK, null, 2);
+  const blob = new Blob([dataStr], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'stock-export.json';
+  a.click();
+});
+
+btnImport.addEventListener('click', () => {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'application/json';
+  inp.onchange = async () => {
+    const file = inp.files[0];
+    if(!file) return;
+    const text = await file.text();
+    try {
+      const parsed = JSON.parse(text);
+      // send to server to overwrite stock (careful)
+      await fetch('/update-stock', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(parsed.reduce((acc,cur)=>{
+          // convert to flat payload e.g. TOMATRIO_price, TOMATRIO_quantity
+          acc[`${cur.id}_price`] = Number(cur.price);
+          acc[`${cur.id}_quantity`] = Number(cur.quantity);
+          return acc;
+        },{}))
+      });
+      await loadStock();
+      toast('Importado com sucesso');
+    } catch(e) {
+      console.error(e);
+      toast('Arquivo inválido');
+    }
+  };
+  inp.click();
+});
+
+// CONFIG management
+async function loadConfig() {
+  try {
+    const res = await fetch('/get-config');
+    const config = await res.json();
+    // Atualiza os campos com os IDs dos canais
+    if (config.mainChannelId) stockChannelIdInput.value = config.mainChannelId;
+    if (config.deliveryChannelId) deliveryChannelIdInput.value = config.deliveryChannelId;
+    if (config.mainMessageId) mainMessageIdInput.value = config.mainMessageId;
+    if (config.clientRoleId) clientRoleIdInput.value = config.clientRoleId;
+    if (config.guildId) guildIdInput.value = config.guildId;
+
+    // Se a configuração for externa, desativa os campos
+    if (config.isManagedExternally) {
+      stockChannelIdInput.disabled = true;
+      deliveryChannelIdInput.disabled = true;
+      mainMessageIdInput.disabled = true;
+      clientRoleIdInput.disabled = true;
+      guildIdInput.disabled = true;
+      btnSaveConfig.disabled = true;
+      btnSaveConfig.style.opacity = 0.5;
+      btnSaveConfig.style.cursor = 'not-allowed';
+      document.getElementById('config-external-note').style.display = 'block';
+    }
+
+
+  } catch (e) {
+    console.error('Erro ao carregar configurações', e);
+    toast('Não foi possível carregar as configurações.');
+  }
+}
+
+btnSaveConfig.addEventListener('click', async () => {
+  const mainChannelId = stockChannelIdInput.value.trim();
+  const deliveryChannelId = deliveryChannelIdInput.value.trim();
+  const mainMessageId = mainMessageIdInput.value.trim(); // Também salvamos o messageId
+  const clientRoleId = clientRoleIdInput.value.trim();
+  const guildId = guildIdInput.value.trim();
+
+  try {
+    const res = await fetch('/save-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mainChannelId, deliveryChannelId, mainMessageId, clientRoleId, guildId })
+    });
+    await res.json();
+    toast('Configurações salvas com sucesso!');
+  } catch (e) {
+    console.error('Erro ao salvar configurações', e);
+    toast('Falha ao salvar as configurações.');
+  }
+});
+
+// refresh and init
+refreshBtn.addEventListener('click', loadStock);
+loadStock();
+loadDeliveries();
+</script>
+</body>
+</html>
